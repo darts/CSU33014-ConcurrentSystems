@@ -114,6 +114,19 @@ void partA_routine3(float *restrict a, float *restrict b, int size) {
 // in the following, size can have any positive value
 void partA_vectorized3(float *restrict a, float *restrict b, int size) {
   // replace the following code with vectorized code
+  int v;
+  __m128 zero_vec = _mm_setzero_ps();
+
+  for (v = 0; v < size - 3; v += 4) {
+    __m128 a_vec = _mm_loadu_ps(&a[v]);
+    __m128 cmp_vec = _mm_cmplt_ps(a_vec, zero_vec);
+    __m128 b_vec = _mm_loadu_ps(&b[v]);
+    b_vec = _mm_and_ps(b_vec, cmp_vec);
+    a_vec = _mm_andnot_ps(cmp_vec, a_vec);
+
+    _mm_storeu_ps(&a[v], _mm_or_ps(a_vec, b_vec));
+  }
+
   for (int i = 0; i < size; i++) {
     if (a[i] < 0.0) {
       a[i] = b[i];
