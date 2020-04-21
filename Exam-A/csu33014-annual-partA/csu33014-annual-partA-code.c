@@ -230,7 +230,10 @@ void partA_vectorized5(unsigned char *restrict a, unsigned char *restrict b,
   // OF 4
   int v;
   for (v = 0; v < size - 15; v += 16) {
+    // load 16 chars
     __m128i b_vect = _mm_loadu_si128((__m128i *)&b[v]);
+
+    // store 16 chars
     _mm_storeu_si128((__m128i *)&a[v], b_vect);
   }
 
@@ -262,7 +265,9 @@ void partA_vectorized6(float *restrict a, float *restrict b,
     __m128 b_vect = _mm_loadu_ps(&b[i - 1]);
     b_vect = _mm_mul_ps(b_vect, c_vect);
     _mm_storeu_ps(tmp_sum, b_vect);
-    a[i] = tmp_sum[0] + tmp_sum[1] + tmp_sum[2];
+    a[i] = tmp_sum[0];
+    a[i] += tmp_sum[1];
+    a[i] += tmp_sum[2];
   }
 
   a[1023] = 0.0;
