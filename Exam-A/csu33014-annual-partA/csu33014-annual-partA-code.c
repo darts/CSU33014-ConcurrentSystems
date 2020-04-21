@@ -78,7 +78,6 @@ float partA_vectorized1(float *restrict a, float *restrict b, int size) {
   // this solution solves the previous issues by locating
   float sum = 0.0;
   float sum_arr[4];
-  __m128 vec_sum = _mm_setzero_ps();
   int v;
   for (v = 0; v < size - 3; v += 4) {
     // {a[v], a[v+1], a[v+2], a[v+3]}
@@ -88,10 +87,10 @@ float partA_vectorized1(float *restrict a, float *restrict b, int size) {
     __m128 b_vec = _mm_loadu_ps(&b[v]);
 
     // add to sum
-    vec_sum = _mm_mul_ps(a_vec, b_vec);
+    a_vec = _mm_mul_ps(a_vec, b_vec);
 
     // store and add to sum
-    _mm_storeu_ps(sum_arr, vec_sum);
+    _mm_storeu_ps(sum_arr, a_vec);
     sum += sum_arr[0];
     sum += sum_arr[1];
     sum += sum_arr[2];
@@ -116,7 +115,7 @@ void partA_routine2(float *restrict a, float *restrict b, int size) {
 
 // in the following, size can have any positive value
 void partA_vectorized2(float *restrict a, float *restrict b, int size) {
-  // replace the following code with vectorized code
+
   __m128 one_mask = _mm_set1_ps((float)1);
 
   int v;
