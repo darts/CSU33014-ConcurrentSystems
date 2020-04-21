@@ -260,11 +260,21 @@ void partA_vectorized6(float *restrict a, float *restrict b,
                        float *restrict c) {
   a[0] = 0.0;
   float tmp_sum[4];
+
+  // This is constant
+  // { c[0], c[1], c[2], c[3]}
   __m128 c_vect = _mm_loadu_ps(c);
   for (int i = 1; i < 1023; i++) {
+    // {b[i-1],b[i],b[i+1],b[i+2]}
     __m128 b_vect = _mm_loadu_ps(&b[i - 1]);
+
+    // {b[i-1]*c[0],b[i]*c[1],b[i+1]*c[2],b[i+2]*c[3]}
     b_vect = _mm_mul_ps(b_vect, c_vect);
+
+    // store result
     _mm_storeu_ps(tmp_sum, b_vect);
+
+    // prevent some floating point errors
     a[i] = tmp_sum[0];
     a[i] += tmp_sum[1];
     a[i] += tmp_sum[2];
