@@ -54,18 +54,49 @@ float partA_routine1(float *restrict a, float *restrict b, int size) {
 float partA_vectorized1(float *restrict a, float *restrict b, int size) {
 
   // This is the first routine I wrote. It occasionally presents floating point
-  // errors
+  // errors:
+  // float sum = 0.0;
+  // float sum_arr[4];
+  // __m128 vec_sum = _mm_setzero_ps();
+  // int v;
+  // for (v = 0; v < size - 3; v += 4) {
+  //   // {a[v], a[v+1], a[v+2], a[v+3]}
+  //   __m128 a_vec = _mm_loadu_ps(&a[v]);
+
+  //   // {b[v], b[v+1], b[v+2], b[v+3]}
+  //   __m128 b_vec = _mm_loadu_ps(&b[v]);
+
+  //   // add to sum
+  //   vec_sum = _mm_add_ps(vec_sum, _mm_mul_ps(a_vec, b_vec));
+  // }
+  // _mm_storeu_ps(sum_arr, vec_sum);
+  // sum += sum_arr[0];
+  // sum += sum_arr[1];
+  // sum += sum_arr[2];
+  // sum += sum_arr[3];
+
+  // this solution solves the previous issues by locating
   float sum = 0.0;
   float sum_arr[4];
   __m128 vec_sum = _mm_setzero_ps();
   int v;
   for (v = 0; v < size - 3; v += 4) {
+    // {a[v], a[v+1], a[v+2], a[v+3]}
     __m128 a_vec = _mm_loadu_ps(&a[v]);
+
+    // {b[v], b[v+1], b[v+2], b[v+3]}
     __m128 b_vec = _mm_loadu_ps(&b[v]);
-    vec_sum = _mm_add_ps(vec_sum, _mm_mul_ps(a_vec, b_vec));
+
+    // add to sum
+    vec_sum = _mm_mul_ps(a_vec, b_vec);
+
+    // store and add to sum
+    _mm_storeu_ps(sum_arr, vec_sum);
+    sum += sum_arr[0];
+    sum += sum_arr[1];
+    sum += sum_arr[2];
+    sum += sum_arr[3];
   }
-  _mm_storeu_ps(sum_arr, vec_sum);
-  sum = sum_arr[0] + sum_arr[1] + sum_arr[2] + sum_arr[3];
 
   for (; v < size; v++) {
     sum = sum + a[v] * b[v];
