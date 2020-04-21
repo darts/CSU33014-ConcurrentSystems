@@ -218,37 +218,43 @@ void partA_vectorized4(float *restrict a, float *restrict b,
   for (int i = 0; i < 2048; i += 4) {
     // Original method:
     //***************************************************************************
-    __m128 b_i_vec = _mm_loadu_ps(&b[i]); // load {b[i], b[i+1], b[i+2], b[i+3]}
-    __m128 c_i_vec = _mm_loadu_ps(&c[i]); // load {c[i], c[i+1], c[i+2], c[i+3]}
+    // __m128 b_i_vec = _mm_loadu_ps(&b[i]); // load {b[i], b[i+1], b[i+2],
+    // b[i+3]}
+    // __m128 c_i_vec = _mm_loadu_ps(&c[i]); // load {c[i], c[i+1], c[i+2],
+    // c[i+3]}
 
-    //{( b[i]*c[i] ), ( b[i+1]*c[i+1] ), ( b[i+2]*c[i+2] ), ( b[i+3]*c[i+3] )}
-    __m128 a_i_vec = _mm_mul_ps(b_i_vec, c_i_vec);
+    // //{( b[i]*c[i] ), ( b[i+1]*c[i+1] ), ( b[i+2]*c[i+2] ), ( b[i+3]*c[i+3]
+    // )}
+    // __m128 a_i_vec = _mm_mul_ps(b_i_vec, c_i_vec);
 
-    //{( b[i]*c[i] ) - ( b[i+1]*c[i+1] ), ( b[i+2]*c[i+2] ) - ( b[i+3]*c[i+3]),
-    // ( b[i]*c[i] ) - ( b[i+1]*c[i+1] ), ( b[i+2]*c[i+2] ) - ( b[i+3]*c[i+3])}
-    a_i_vec = _mm_hsub_ps(a_i_vec, a_i_vec);
+    // //{( b[i]*c[i] ) - ( b[i+1]*c[i+1] ), ( b[i+2]*c[i+2] ) - (
+    // b[i+3]*c[i+3]),
+    // // ( b[i]*c[i] ) - ( b[i+1]*c[i+1] ), ( b[i+2]*c[i+2] ) - (
+    // b[i+3]*c[i+3])} a_i_vec = _mm_hsub_ps(a_i_vec, a_i_vec);
 
-    // {b[i+1], b[i], b[i+3], b[i+2]}
-    b_i_vec = _mm_shuffle_ps(b_i_vec, b_i_vec, CREATE_IMM8(1, 0, 3, 2));
+    // // {b[i+1], b[i], b[i+3], b[i+2]}
+    // b_i_vec = _mm_shuffle_ps(b_i_vec, b_i_vec, CREATE_IMM8(1, 0, 3, 2));
 
-    //{( b[i+1]*c[i] ), ( b[i]*c[i+1] ), ( b[i+3]*c[i+2] ), ( b[i+2]*c[i+3])}
-    __m128 a_i_plus_vec = _mm_mul_ps(b_i_vec, c_i_vec);
+    // //{( b[i+1]*c[i] ), ( b[i]*c[i+1] ), ( b[i+3]*c[i+2] ), ( b[i+2]*c[i+3])}
+    // __m128 a_i_plus_vec = _mm_mul_ps(b_i_vec, c_i_vec);
 
-    //{( b[i+1]*c[i] ) + ( b[i]*c[i+1] ), ( b[i+3]*c[i+2] ) + ( b[i+2]*c[i+3] ),
-    // ( b[i+1]*c[i] ) + ( b[i]*c[i+1] ), ( b[i+3]*c[i+2] ) + ( b[i+2]*c[i+3] )}
-    a_i_plus_vec = _mm_hadd_ps(a_i_plus_vec, a_i_plus_vec);
+    // //{( b[i+1]*c[i] ) + ( b[i]*c[i+1] ), ( b[i+3]*c[i+2] ) + ( b[i+2]*c[i+3]
+    // ),
+    // // ( b[i+1]*c[i] ) + ( b[i]*c[i+1] ), ( b[i+3]*c[i+2] ) + ( b[i+2]*c[i+3]
+    // )} a_i_plus_vec = _mm_hadd_ps(a_i_plus_vec, a_i_plus_vec);
 
-    //{( b[i]*c[i] ) - ( b[i+1]*c[i+1] ), ( b[i+2]*c[i+2] ) - ( b[i+3]*c[i+3] ),
-    // ( b[i+1]*c[i] ) + ( b[i]*c[i+1] ), ( b[i+3]*c[i+2] ) + ( b[i+2]*c[i+3] )}
-    a_i_plus_vec =
-        _mm_shuffle_ps(a_i_vec, a_i_plus_vec, CREATE_IMM8(0, 1, 0, 1));
+    // //{( b[i]*c[i] ) - ( b[i+1]*c[i+1] ), ( b[i+2]*c[i+2] ) - ( b[i+3]*c[i+3]
+    // ),
+    // // ( b[i+1]*c[i] ) + ( b[i]*c[i+1] ), ( b[i+3]*c[i+2] ) + ( b[i+2]*c[i+3]
+    // )} a_i_plus_vec =
+    //     _mm_shuffle_ps(a_i_vec, a_i_plus_vec, CREATE_IMM8(0, 1, 0, 1));
 
-    //{( b[i]*c[i] )-( b[i+1]*c[i+1] ), ( b[i+1]*c[i] )+( b[i]*c[i+1] )
-    // ( b[i+2]*c[i+2] )-( b[i+3]*c[i+3] ), ( b[i+3]*c[i+2] )+( b[i+2]*c[i+3] )}
-    a_i_plus_vec =
-        _mm_shuffle_ps(a_i_plus_vec, a_i_plus_vec, CREATE_IMM8(0, 2, 1, 3));
+    // //{( b[i]*c[i] )-( b[i+1]*c[i+1] ), ( b[i+1]*c[i] )+( b[i]*c[i+1] )
+    // // ( b[i+2]*c[i+2] )-( b[i+3]*c[i+3] ), ( b[i+3]*c[i+2] )+( b[i+2]*c[i+3]
+    // )} a_i_plus_vec =
+    //     _mm_shuffle_ps(a_i_plus_vec, a_i_plus_vec, CREATE_IMM8(0, 2, 1, 3));
 
-    _mm_storeu_ps(&a[i], a_i_plus_vec); // store result
+    // _mm_storeu_ps(&a[i], a_i_plus_vec); // store result
 
     // Cost, calculated from Intel docs for Skylake processors:
     /*
@@ -261,8 +267,45 @@ void partA_vectorized4(float *restrict a, float *restrict b,
 
     Total: latency(23), CPI(10)
     */
-
     //***************************************************************************
+    // we can do better by avoiding hadd and hsub. The following code makes
+    // better use of the calculations. Some of the operations that were
+    // duplicated previously are now not. New method:
+    __m128 b_i_vec = _mm_loadu_ps(&b[i]); // load {b[i], b[i+1], b[i+2], b[i+3]}
+    __m128 c_i_vec = _mm_loadu_ps(&c[i]); // load {c[i], c[i+1], c[i+2], c[i+3]}
+
+    // { b[i], b[i], b[i+2], b[i+2]}
+    __m128 b_select = _mm_shuffle_ps(b_i_vec, b_i_vec, CREATE_IMM8(0, 0, 2, 2));
+
+    // { b[i]+c[i], b[i]*c[i+1], b[i+2]*c[i+2], b[i+2]*c[i+3}
+    __m128 i_final = _mm_mul_ps(b_select, c_i_vec);
+
+    // { c[i+1], c[i], c[i+3], c[i+2] }
+    __m128 c_select = _mm_shuffle_ps(c_i_vec, c_i_vec, CREATE_IMM8(1, 0, 3, 2));
+
+    // { b[i+1], b[i+1], b[i+3], b[i+3]}
+    b_select = _mm_shuffle_ps(b_i_vec, b_i_vec, CREATE_IMM8(1, 1, 3, 3));
+
+    // { c[i+1]*b[i+1], c[i]+b[i+1], c[i+3]*b[i+3], c[i+2]*b[i+3] }
+    __m128 i_plus_final = _mm_mul_ps(c_select, b_select);
+
+    //{( b[i]*c[i] )-( b[i+1]*c[i+1] ), ( b[i+1]*c[i] )+( b[i]*c[i+1] )
+    // ( b[i+2]*c[i+2] )-( b[i+3]*c[i+3] ), ( b[i+3]*c[i+2] )+( b[i+2]*c[i+3]
+    i_final = _mm_addsub_ps(i_final, i_plus_final);
+
+    // Store result
+    _mm_storeu_ps(&a[i], i_final);
+
+    // Cost, calculated from Intel docs for Skylake processors:
+    /*
+    loadu:   latency(0), CPI(0.5) -> x2 latency(0), CPI(1)
+    mul:     latency(4), CPI(0.5) -> x2 latency(8), CPI(1)
+    shuffle: latency(1), CPI(1)   -> x3 latency(3), CPI(3)
+    addsub:  latency(4), CPI(0.5) -> x1 latency(4), CPI(0.5)
+    storeu:  latency(0), CPI(1)   -> x1 latency(0), CPI(1)
+
+    Total: latency(15), CPI(6.5)
+    */
   }
 }
 
@@ -279,8 +322,8 @@ void partA_routine5(unsigned char *restrict a, unsigned char *restrict b,
 void partA_vectorized5(unsigned char *restrict a, unsigned char *restrict b,
                        int size) {
   // replace the following code with vectorized
-  // code********************************************** OPTIMISE THE MULTIPLES
-  // OF 4
+  // code********************************************** OPTIMISE THE
+  // MULTIPLES OF 4
   int v;
   for (v = 0; v < size - 15; v += 16) {
     // load 16 chars
