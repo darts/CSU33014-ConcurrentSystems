@@ -149,21 +149,37 @@ void partA_routine4(float *restrict a, float *restrict b, float *restrict c) {
 void partA_vectorized4(float *restrict a, float *restrict b,
                        float *restrict c) {
   for (int i = 0; i < 2048; i += 4) {
-    __m128 b_i_vec = _mm_loadu_ps(&b[i]); // load {b[i], b[i],b[i],b[i]}
-    __m128 c_i_vec = _mm_loadu_ps(&c[i]);
+    __m128 b_i_vec = _mm_loadu_ps(&b[i]); // load {b[i], b[i+1], b[i+2], b[i+3]}
+    __m128 c_i_vec = _mm_loadu_ps(&c[i]); // load {c[i], c[i+1], c[i+2], c[i+3]}
 
+    //{( b[i]*c[i] ), ( b[i+1]*c[i+1] ), ( b[i+2]*c[i+2] ), ( b[i+3]*c[i+3] )}
     __m128 a_i_vec = _mm_mul_ps(b_i_vec, c_i_vec);
+
+    //{( b[i]*c[i] ) - ( b[i+1]*c[i+1] ), ( b[i+2]*c[i+2] ) - ( b[i+3]*c[i+3]),
+    // ( b[i]*c[i] ) - ( b[i+1]*c[i+1] ), ( b[i+2]*c[i+2] ) - ( b[i+3]*c[i+3])}
     a_i_vec = _mm_hsub_ps(a_i_vec, a_i_vec);
 
+    // {b[i+1], b[i], b[i+3], b[i+2]}
     b_i_vec = _mm_shuffle_ps(b_i_vec, b_i_vec, CREATE_IMM8(1, 0, 3, 2));
 
+    //{( b[i+1]*c[i] ), ( b[i]*c[i+1] ), ( b[i+3]*c[i+2] ), ( b[i+2]*c[i+3])}
     __m128 a_i_plus_vec = _mm_mul_ps(b_i_vec, c_i_vec);
+
+    //{( b[i+1]*c[i] ) + ( b[i]*c[i+1] ), ( b[i+3]*c[i+2] ) + ( b[i+2]*c[i+3] ),
+    // ( b[i+1]*c[i] ) + ( b[i]*c[i+1] ), ( b[i+3]*c[i+2] ) + ( b[i+2]*c[i+3] )}
     a_i_plus_vec = _mm_hadd_ps(a_i_plus_vec, a_i_plus_vec);
+
+    //{( b[i]*c[i] ) - ( b[i+1]*c[i+1] ), ( b[i+2]*c[i+2] ) - ( b[i+3]*c[i+3] ),
+    // ( b[i+1]*c[i] ) + ( b[i]*c[i+1] ), ( b[i+3]*c[i+2] ) + ( b[i+2]*c[i+3] )}
     a_i_plus_vec =
         _mm_shuffle_ps(a_i_vec, a_i_plus_vec, CREATE_IMM8(0, 1, 0, 1));
+
+    //{( b[i]*c[i] )-( b[i+1]*c[i+1] ), ( b[i+1]*c[i] )+( b[i]*c[i+1] )
+    // ( b[i+2]*c[i+2] )-( b[i+3]*c[i+3] ), ( b[i+3]*c[i+2] )+( b[i+2]*c[i+3] )}
     a_i_plus_vec =
         _mm_shuffle_ps(a_i_plus_vec, a_i_plus_vec, CREATE_IMM8(0, 2, 1, 3));
-    _mm_storeu_ps(&a[i], a_i_plus_vec);
+
+    _mm_storeu_ps(&a[i], a_i_plus_vec); // store result
   }
 }
 
