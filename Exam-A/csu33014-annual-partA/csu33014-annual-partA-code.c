@@ -216,6 +216,8 @@ void partA_routine4(float *restrict a, float *restrict b, float *restrict c) {
 void partA_vectorized4(float *restrict a, float *restrict b,
                        float *restrict c) {
   for (int i = 0; i < 2048; i += 4) {
+    // Original method:
+    //***************************************************************************
     __m128 b_i_vec = _mm_loadu_ps(&b[i]); // load {b[i], b[i+1], b[i+2], b[i+3]}
     __m128 c_i_vec = _mm_loadu_ps(&c[i]); // load {c[i], c[i+1], c[i+2], c[i+3]}
 
@@ -247,6 +249,20 @@ void partA_vectorized4(float *restrict a, float *restrict b,
         _mm_shuffle_ps(a_i_plus_vec, a_i_plus_vec, CREATE_IMM8(0, 2, 1, 3));
 
     _mm_storeu_ps(&a[i], a_i_plus_vec); // store result
+
+    // Cost, calculated from Intel docs for Skylake processors:
+    /*
+    loadu:   latency(0), CPI(0.5) -> x2 latency(0), CPI(1)
+    mul:     latency(4), CPI(0.5) -> x2 latency(8), CPI(1)
+    hsub:    latency(6), CPI(2)   -> x1 latency(6), CPI(2)
+    shuffle: latency(1), CPI(1)   -> x3 latency(3), CPI(3)
+    hadd:    latency(6), CPI(2)   -> x1 latency(6), CPI(2)
+    storeu:  latency(0), CPI(1)   -> x1 latency(0), CPI(1)
+
+    Total: latency(23), CPI(10)
+    */
+
+    //***************************************************************************
   }
 }
 
