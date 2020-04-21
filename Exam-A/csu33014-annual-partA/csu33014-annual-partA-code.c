@@ -145,12 +145,25 @@ void partA_routine4(float *restrict a, float *restrict b, float *restrict c) {
   }
 }
 
+#define CREATE_IMM8(a, b, c, d) ((d << 6) | (c << 4) | (b << 2) | (a << 0))
 void partA_vectorized4(float *restrict a, float *restrict b,
                        float *restrict c) {
-  // replace the following code with vectorized code
-  for (int i = 0; i < 2048; i = i + 2) {
-    a[i] = b[i] * c[i] - b[i + 1] * c[i + 1];
-    a[i + 1] = b[i] * c[i + 1] + b[i + 1] * c[i];
+  for (int i = 0; i < 2048; i += 4) {
+    __m128 b_i_vec = _mm_loadu_ps(&b[i]); // load {b[i], b[i],b[i],b[i]}
+    __m128 c_i_vec = _mm_loadu_ps(&c[i]);
+
+    __m128 a_i_vec = _mm_mul_ps(b_i_vec, c_i_vec);
+    a_i_vec = _mm_hsub_ps(a_i_vec, a_i_vec);
+
+    b_i_vec = _mm_shuffle_ps(b_i_vec, b_i_vec, CREATE_IMM8(1, 0, 3, 2));
+
+    __m128 a_i_plus_vec = _mm_mul_ps(b_i_vec, c_i_vec);
+    a_i_plus_vec = _mm_hadd_ps(a_i_plus_vec, a_i_plus_vec);
+    a_i_plus_vec =
+        _mm_shuffle_ps(a_i_vec, a_i_plus_vec, CREATE_IMM8(0, 1, 0, 1));
+    a_i_plus_vec =
+        _mm_shuffle_ps(a_i_plus_vec, a_i_plus_vec, CREATE_IMM8(0, 2, 1, 3));
+    _mm_storeu_ps(&a[i], a_i_plus_vec);
   }
 }
 
@@ -166,9 +179,17 @@ void partA_routine5(unsigned char *restrict a, unsigned char *restrict b,
 
 void partA_vectorized5(unsigned char *restrict a, unsigned char *restrict b,
                        int size) {
-  // replace the following code with vectorized code
-  for (int i = 0; i < size; i++) {
-    a[i] = b[i];
+  // replace the following code with vectorized
+  // code********************************************** OPTIMISE THE MULTIPLES
+  // OF 4
+  int v;
+  for (v = 0; v < size - 15; v += 16) {
+    __m128i b_vect = _mm_loadu_si128((__m128i *)&b[v]);
+    _mm_storeu_si128((__m128i *)&a[v], b_vect);
+  }
+
+  for (; v < size; v++) {
+    a[v] = b[v];
   }
 }
 
@@ -188,14 +209,15 @@ void partA_routine6(float *restrict a, float *restrict b, float *restrict c) {
 
 void partA_vectorized6(float *restrict a, float *restrict b,
                        float *restrict c) {
-  // replace the following code with vectorized code
   a[0] = 0.0;
+  float tmp_sum[4];
+  __m128 c_vect = _mm_loadu_ps(c);
   for (int i = 1; i < 1023; i++) {
-    float sum = 0.0;
-    for (int j = 0; j < 3; j++) {
-      sum = sum + b[i + j - 1] * c[j];
-    }
-    a[i] = sum;
+    __m128 b_vect = _mm_loadu_ps(&b[i - 1]);
+    b_vect = _mm_mul_ps(b_vect, c_vect);
+    _mm_storeu_ps(tmp_sum, b_vect);
+    a[i] = tmp_sum[0] + tmp_sum[1] + tmp_sum[2];
   }
+
   a[1023] = 0.0;
 }
