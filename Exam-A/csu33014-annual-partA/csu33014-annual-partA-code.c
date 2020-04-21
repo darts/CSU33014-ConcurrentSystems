@@ -12,6 +12,9 @@
 // itself or a value directly derived from it (such as pointer + 1)
 // will be used to access the object to which it points".
 
+// The following was used as a source of information on instructions and their
+// cost: https://software.intel.com/sites/landingpage/IntrinsicsGuide/#
+
 #include <immintrin.h>
 #include <stdio.h>
 
@@ -170,8 +173,7 @@ void partA_vectorized3(float *restrict a, float *restrict b, int size) {
     __m128 a_vec = _mm_loadu_ps(&a[v]);
 
     // {a[v] < 0, a[v+1] < 0, a[v+2] < 0, a[v+3] < 0}
-    // Not the value for true is 0xFFFFFFFF (true) or 0x0 (false)
-    // Src: https://software.intel.com/sites/landingpage/IntrinsicsGuide/#
+    // Note the value for true is 0xFFFFFFFF (true) or 0x0 (false)
     __m128 cmp_vec = _mm_cmplt_ps(a_vec, zero_vec);
 
     // {b[v], b[v+1], b[v+2], b[v+3]}
