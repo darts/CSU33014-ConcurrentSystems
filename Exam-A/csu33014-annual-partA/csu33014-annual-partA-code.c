@@ -52,7 +52,9 @@ float partA_routine1(float *restrict a, float *restrict b, int size) {
 
 // insert vectorized code for routine1 here
 float partA_vectorized1(float *restrict a, float *restrict b, int size) {
-  // replace the following code with vectorized code
+
+  // This is the first routine I wrote. It occasionally presents floating point
+  // errors
   float sum = 0.0;
   float sum_arr[4];
   __m128 vec_sum = _mm_setzero_ps();
@@ -88,10 +90,20 @@ void partA_vectorized2(float *restrict a, float *restrict b, int size) {
 
   int v;
   for (v = 0; v < size - 3; v += 4) {
+
+    // { b[v], b[v+1], b[v+2], b[v+3] }
     __m128 b_load = _mm_loadu_ps(&b[v]);
+
+    // { b[v]+1, b[v+1]+1, b[v+2]+1, b[v+3]+1 }
     b_load = _mm_add_ps(b_load, one_mask);
+
+    // { 1/(b[v]+1), 1/(b[v+1]+1), 1/(b[v+2]+1), 1/(b[v+3]+1) }
     b_load = _mm_div_ps(one_mask, b_load);
+
+    // { 1-(1/(b[v]+1)), 1-(1/(b[v+1]+1)), 1-(1/(b[v+2]+1)), 1-(1/(b[v+3]+1)) }
     b_load = _mm_sub_ps(one_mask, b_load);
+
+    // store result
     _mm_storeu_ps(&a[v], b_load);
   }
 
