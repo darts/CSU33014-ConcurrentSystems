@@ -129,16 +129,34 @@ void partA_vectorized3(float *restrict a, float *restrict b, int size) {
   int v;
   __m128 zero_vec = _mm_setzero_ps();
 
+  // For multiples of 4
   for (v = 0; v < size - 3; v += 4) {
+    // {a[v], a[v+1], a[v+2], a[v+3]}
     __m128 a_vec = _mm_loadu_ps(&a[v]);
+
+    // {a[v] < 0, a[v+1] < 0, a[v+2] < 0, a[v+3] < 0}
+    // Not the value for true is 0xFFFFFFFF (true) or 0x0 (false)
+    // Src: https://software.intel.com/sites/landingpage/IntrinsicsGuide/#
     __m128 cmp_vec = _mm_cmplt_ps(a_vec, zero_vec);
+
+    // {b[v], b[v+1], b[v+2], b[v+3]}
     __m128 b_vec = _mm_loadu_ps(&b[v]);
+
+    // AND b_vec and cmp_vec
+    // Only where a[v_i] < 0, remains
     b_vec = _mm_and_ps(b_vec, cmp_vec);
+
+    // cmp_vec = NOT cmp_vec
+    // AND a_vec and cmp_vec
+    // Only where a[v_i] >= 0, remains
     a_vec = _mm_andnot_ps(cmp_vec, a_vec);
 
+    // OR the two vectors for a complete set
+    // Store them in the array
     _mm_storeu_ps(&a[v], _mm_or_ps(a_vec, b_vec));
   }
 
+  // Remaining multiples
   for (int i = 0; i < size; i++) {
     if (a[i] < 0.0) {
       a[i] = b[i];
