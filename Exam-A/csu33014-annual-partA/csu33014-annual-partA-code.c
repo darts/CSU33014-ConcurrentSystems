@@ -127,8 +127,13 @@ void partA_vectorized2(float *restrict a, float *restrict b, int size) {
     // { b[v]+1, b[v+1]+1, b[v+2]+1, b[v+3]+1 }
     b_load = _mm_add_ps(b_load, one_mask);
 
+    // Originally used this:
     // { 1/(b[v]+1), 1/(b[v+1]+1), 1/(b[v+2]+1), 1/(b[v+3]+1) }
-    b_load = _mm_div_ps(one_mask, b_load);
+    // b_load = _mm_div_ps(one_mask, b_load);
+
+    // Found this in the Intel docs to replace the above.
+    // It is substantially faster and with much lower latency.
+    b_load = _mm_rcp_ps(b_load);
 
     // { 1-(1/(b[v]+1)), 1-(1/(b[v+1]+1)), 1-(1/(b[v+2]+1)), 1-(1/(b[v+3]+1)) }
     b_load = _mm_sub_ps(one_mask, b_load);
