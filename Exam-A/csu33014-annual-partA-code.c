@@ -78,7 +78,8 @@ float partA_vectorized1(float *restrict a, float *restrict b, int size) {
   // sum += sum_arr[2];
   // sum += sum_arr[3];
 
-  // this solution solves the previous issues by locating
+  // this solution solves the floating point inaccuracies (although it may be
+  // marginally slower)
   float sum = 0.0;
   float sum_arr[4];
   int v;
@@ -321,9 +322,6 @@ void partA_routine5(unsigned char *restrict a, unsigned char *restrict b,
 
 void partA_vectorized5(unsigned char *restrict a, unsigned char *restrict b,
                        int size) {
-  // replace the following code with vectorized
-  // code********************************************** OPTIMISE THE
-  // MULTIPLES OF 4
   int v;
   for (v = 0; v < size - 15; v += 16) {
     // load 16 chars
@@ -333,6 +331,14 @@ void partA_vectorized5(unsigned char *restrict a, unsigned char *restrict b,
     _mm_storeu_si128((__m128i *)&a[v], b_vect);
   }
 
+  // parse sets of 4
+  int *a_int = (int *)a;
+  int *b_int = (int *)b;
+  for (int i = v / 4; i < (size - 3) / 4; i++, v += 4) {
+    a_int[i] = b_int[i];
+  }
+
+  // remaining multiples of 1
   for (; v < size; v++) {
     a[v] = b[v];
   }
