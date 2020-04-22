@@ -49,24 +49,47 @@ int number_within_k_degrees(struct person *start, int total_people, int k) {
   return count;
 }
 
-void find_reachable_recursive_less(struct person *current, int steps_remaining,
-                              bool *reachable) {
-  // mark current root person as reachable
-    reachable[person_get_index(current)] = true;
-    // now deal with this person's acquaintances
-    if (steps_remaining > 0) {
-      int num_known = person_get_num_known(current);
-      for (int i = 0; i < num_known; i++) {
-        struct person *acquaintance = person_get_acquaintance(current, i);
-        if(!reachable[person_get_index(acquaintance)]){
-        find_reachable_recursive_less(acquaintance, steps_remaining - 1, reachable);
+int find_reachable_bfs(struct person *start, int steps_remaining, int total_people){
+  bool *reachable;
+  int count = 1;
+
+  // maintain a boolean flag for each person indicating if they are visited
+  reachable = malloc(sizeof(bool) * total_people);
+  for (int i = 0; i < total_people; i++) {
+    reachable[i] = false;
+  }
+
+  struct person **a_arr = malloc(sizeof(struct person)*total_people);
+  struct person **b_arr = malloc(sizeof(struct person)*total_people);
+  bool popA = true;
+  int num_in_next = 1;
+  a_arr[0] = start;
+  reachable[person_get_index(start)] = true;
+
+  while(steps_remaining-- > 0){
+    int pushIndex = 0;
+    struct person **cur_pop = popA?a_arr:b_arr;
+    struct person **cur_push = popA?b_arr:a_arr;
+
+    for(int popIndex = 0;popIndex < num_in_next;popIndex++){
+      //get the number of people this person knows
+      int num_known = person_get_num_known(cur_pop[popIndex]);
+
+      for(int i = 0; i < num_known;i++){
+        struct person *acquaintance = person_get_acquaintance(cur_pop[popIndex], i);
+        //have we reached this person yet
+        if(reachable[person_get_index(acquaintance)] == false){
+
+          reachable[person_get_index(acquaintance)] = true;
+          cur_push[pushIndex++] = acquaintance;
+          count++;
         }
       }
     }
-}
-
-void find_reachable_recursive_bfs(struct person **current, int steps_remaining, bool *reachable){
-  
+    popA = !popA;
+    num_in_next = pushIndex;
+  }
+  return count;
 }
 
 
@@ -85,17 +108,7 @@ int less_redundant_number_within_k_degrees(struct person *start,
     reachable[i] = false;
   }
 
-  // now search for all people who are reachable with k steps
-  find_reachable_recursive_less(start, k, reachable);
-
-  // all visited people are marked reachable, so count them
-  count = 0;
-  for (int i = 0; i < total_people; i++) {
-    if (reachable[i] == true) {
-      count++;
-    }
-  }
-  return count;
+  return find_reachable_bfs(start, k, total_people);
 }
 
 // computes the number of people within k degrees of the start person;
