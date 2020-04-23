@@ -102,15 +102,6 @@ int find_reachable_bfs(struct person *start, int steps_remaining, int total_peop
 // less repeated computation than the simple original version
 int less_redundant_number_within_k_degrees(struct person *start,
                                            int total_people, int k) {
- bool *reachable;
-  int count;
-
-  // maintain a boolean flag for each person indicating if they are visited
-  reachable = malloc(sizeof(bool) * total_people);
-  for (int i = 0; i < total_people; i++) {
-    reachable[i] = false;
-  }
-
   return find_reachable_bfs(start, k, total_people);
 }
 
