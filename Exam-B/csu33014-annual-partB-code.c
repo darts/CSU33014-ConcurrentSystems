@@ -89,6 +89,9 @@ int find_reachable_bfs(struct person *start, int steps_remaining, int total_peop
     popA = !popA;
     num_in_next = pushIndex;
   }
+  free(a_arr);
+  free(b_arr);
+  free(reachable);
   return count;
 }
 
