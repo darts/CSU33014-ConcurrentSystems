@@ -8,6 +8,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <omp.h>
+
 #include "csu33014-annual-partB-person.h"
 
 void find_reachable_recursive(struct person *current, int steps_remaining,
@@ -59,15 +61,9 @@ int number_within_k_degrees(struct person *start, int total_people, int k)
 // Uses a breadth-first-search approach
 int find_reachable_bfs(struct person *start, int steps_remaining, int total_people)
 {
-  bool *reachable;
-  int count = 1;
-
   // maintain a boolean flag for each person indicating if they are visited
-  reachable = malloc(sizeof(bool) * total_people);
-  for (int i = 0; i < total_people; i++)
-  {
-    reachable[i] = false;
-  }
+  bool *reachable = calloc(total_people, sizeof(bool));
+  int count = 1;
 
   // two stacks for keeping track of people to visit in this iteration an the next
   struct person **a_arr = malloc(sizeof(struct person) * total_people);
@@ -164,10 +160,80 @@ resizing the arrays. In the case of a graph with many more nodes, it is quite po
 costs.
 */
 
+// A more efficient version of the algorithm
+// Uses a parallel breadth-first-search approach
+int find_reachable_bfs_p(struct person *start, int steps_remaining, int total_people)
+{
+  // maintain a boolean flag for each person indicating if they are visited
+  bool *reachable = calloc(total_people, sizeof(bool));
+  int count = 1;
+
+  // two stacks for keeping track of people to visit in this iteration an the next
+  struct person **a_arr = malloc(sizeof(struct person) * total_people);
+  struct person **b_arr = malloc(sizeof(struct person) * total_people);
+  bool popA = true;
+  int num_in_next = 1;                       // how many to search in next iteration
+  a_arr[0] = start;                          // add first node
+  reachable[person_get_index(start)] = true; // mark first person as visited
+
+  while (steps_remaining-- > 0 && num_in_next > 0)
+  {
+    //where to start writing to array
+    int pushIndex = 0;
+
+    //Which stack to read from and which to write to
+    struct person **cur_pop = popA ? a_arr : b_arr;  //All of the people to search at this depth are on this stack
+    struct person **cur_push = popA ? b_arr : a_arr; //All of the people to visit in the next iteration on this stack
+
+    //go through all the people to visit at this depth
+    // the reduction part is important to keep the count safe, this was found after some painful debugging
+    // The effect of 'reduction' in this case can be approximated by:
+    /*
+      count = 0;
+      each_thread{
+        local_count = 0;
+        doBFS();
+      }.onThreadClose{
+        atomic_operation(count += local_count);
+      }
+    */
+    #pragma omp parallel reduction(+:count) 
+    for (int popIndex = 0; popIndex < num_in_next; popIndex++)
+    {
+      //get the number of people this person knows
+      int num_known = person_get_num_known(cur_pop[popIndex]);
+
+      //Go through everyone they know
+      for (int i = 0; i < num_known; i++)
+      {
+        struct person *acquaintance = person_get_acquaintance(cur_pop[popIndex], i);
+        //If this person has not yet been seen, add them to the list, otherwise ignore them
+        if (reachable[person_get_index(acquaintance)] == false)
+        {
+          reachable[person_get_index(acquaintance)] = true;
+          cur_push[pushIndex++] = acquaintance;
+          count++;
+        }
+      }
+    }
+
+    //switch stacks
+    popA = !popA;
+
+    //set number of people to check in next iteration
+    num_in_next = pushIndex;
+  }
+  //clean up and return
+  free(a_arr);
+  free(b_arr);
+  free(reachable);
+  return count;
+}
+
 // computes the number of people within k degrees of the start person;
 // parallel version of the code
 int parallel_number_within_k_degrees(struct person *start, int total_people,
                                      int k)
 {
-  return number_within_k_degrees(start, total_people, k);
+  return find_reachable_bfs_p(start, total_people, k);
 }
