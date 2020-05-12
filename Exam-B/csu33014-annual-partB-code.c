@@ -172,8 +172,8 @@ int parallel_number_within_k_degrees(struct person *start, int total_people,
 
   // two stacks for keeping track of people to visit in this iteration an the next
   struct person **a_arr = malloc(sizeof(struct person *) * total_people);
-  //struct person **b_arr = malloc(sizeof(struct person *) * total_people);
- // bool popA = true;
+  struct person **b_arr = malloc(sizeof(struct person *) * total_people);
+  bool popA = true;
   int num_in_next = 1;                       // how many to search in next iteration
   a_arr[0] = start;                          // add first node
   reachable[person_get_index(start)] = true; // mark first person as visited
@@ -181,8 +181,8 @@ int parallel_number_within_k_degrees(struct person *start, int total_people,
   while (steps_remaining-- > 0 && num_in_next > 0)
   {
     //Which stack to read from and which to write to
-    struct person **cur_pop = a_arr;  //All of the people to search at this depth are on this stack
-   // struct person **cur_push = popA ? b_arr : a_arr; //All of the people to visit in the next iteration on this stack
+    struct person **cur_pop = popA ? a_arr :b_arr;  //All of the people to search at this depth are on this stack
+    struct person **cur_push = !popA ? a_arr :b_arr; //All of the people to visit in the next iteration on this stack
     int pushIndex = 0;
 #pragma omp parallel reduction(+: count)
     {
@@ -217,9 +217,11 @@ int parallel_number_within_k_degrees(struct person *start, int total_people,
       }
 
       // COMBINE STACKS FROM ALL BEFORE EXITING LOOP
-      
-
-
+      #pragma omp critical
+      for (size_t i = 0; i < locPushIndex; i++)
+      {
+        cur_push[pushIndex++] = loc_push_arr[i];
+      }
       free(loc_push_arr);
     }
 
@@ -230,7 +232,7 @@ int parallel_number_within_k_degrees(struct person *start, int total_people,
   }
   //clean up and return
   free(a_arr);
-  //free(b_arr);
+  free(b_arr);
   free(reachable);
   return count;
 }
