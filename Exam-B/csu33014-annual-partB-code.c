@@ -160,6 +160,12 @@ resizing the arrays. In the case of a graph with many more nodes, it is quite po
 costs.
 */
 
+
+
+
+
+
+
 // computes the number of people within k degrees of the start person;
 // parallel version of the code
 int parallel_number_within_k_degrees(struct person *start, int total_people,
@@ -189,16 +195,15 @@ int parallel_number_within_k_degrees(struct person *start, int total_people,
       int locPushIndex = 0;
       struct person **loc_push_arr = malloc(sizeof(struct person *) * total_people);
 
-      size_t id = omp_get_thread_num();
-      size_t n_threads = omp_get_num_threads();
-      size_t slice_size = num_in_next / n_threads;
-      size_t start = id * slice_size;
-
-      if (id == n_threads - 1) {
-        slice_size = num_in_next - start;
+      int thread_id = omp_get_thread_num();
+      int thread_count = omp_get_num_threads();
+      int section_size = num_in_next / thread_count;
+      int start = thread_id * section_size;
+      if (thread_id == thread_count - 1) {
+        section_size = num_in_next - start;
       }
 
-      for (int popIndex = start; popIndex < start + slice_size; popIndex++)
+      for (int popIndex = start; popIndex < start + section_size; popIndex++)
       {
         //get the number of people this person knows
         int num_known = person_get_num_known(cur_pop[popIndex]);
@@ -216,7 +221,7 @@ int parallel_number_within_k_degrees(struct person *start, int total_people,
         }
       }
 
-      // COMBINE STACKS FROM ALL BEFORE EXITING LOOP
+      // combine stacks from all before exiting
       #pragma omp critical
       for (size_t i = 0; i < locPushIndex; i++)
       {
@@ -236,3 +241,32 @@ int parallel_number_within_k_degrees(struct person *start, int total_people,
   free(reachable);
   return count;
 }
+
+/*
+Part B.2 Comment
+
+In order to parallelise the improved algorithm, some modifications were required:
+In the non-parallel version, two arrays were used to keep track of which nodes were being searched at each depth. Using this system, one list would be read from and one written
+to with each pass of the algorithm ie. at each depth. The lists were then swapped on the subsequent pass so the new nodes would be read. Since the lists were being written to a
+fixed index, this had to be modified to allow for concurrency. 
+To do this, first, the reading from the list was parallelised. The way this was done was by counting the number of total threads to determine how many nodes each thread had to 
+process. Each thread was then given a starting offset and a number of nodes to inspect. This solved the problem of reading nodes correctly. 
+The second modification required here was to writing to the lists. Originally this was done by making that section critical. However this was very slow. To deal with this, each 
+thread was given a local array to write new nodes to. These were combined before the thread was closed to create the resulting full list of nodes. This was substantially faster
+than writing each node to the same array.
+In order to determine if a node has been visited, the following function was used: __sync_bool_compare_and_swap  
+This function allowed syncronous reading of if the node has already been visited and swapped if it has not.
+Keeping track of the number of nodes visited in total was done through the built in 'reduction' feature. It creates a local copy of a resource for each thread and combines their 
+values with the supplied operand when the threads are closed.
+
+Performance:
+The performance of the threaded solution is dependent on the number of threads. In this case since we already have a worst case run time of O(n) where n is the number of nodes 
+in the network, we end up with the same worst case running time. The situation for this would be an acyclic graph where each node is connected to exactly two others. This would 
+result in the worst case running time but only if the depth is n.
+The ideal running time is closer to O(single_threaded)/t where t is the number of threads. This could occur if the amount of work required off each thread is exactly the same 
+and the number of threads is at an optimal value to minimise overhead. Again however this is unrealistic.
+In reality the performance of the code is about O(single_threaded)/2. With larger inputs a CPU with more cores this would likely be improved. Even still I believe this is a 
+substantial enough increase to warrent the extra complexity.
+
+There is also a memory overhead associated with the code as each thread has a local copy of the array used to store newly visited nodes. This is however not significant.
+*/
